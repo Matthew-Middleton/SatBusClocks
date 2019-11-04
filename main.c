@@ -1,7 +1,7 @@
 #include <msp430.h> 
 
 
-/**
+/**http://e2e.ti.com/support/microcontrollers/msp430/f/166/t/304138
  * main.c
  */
 int main(void)
