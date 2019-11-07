@@ -50,3 +50,4 @@ __interrupt void timer_A0(void)
     P1SEL0 &= 0x0;
     P1SEL2 &= 0x0;
 }
+//https://e2e.ti.com/support/microcontrollers/msp430/f/166/t/618978?MSP430FR5994-LPM3-using-timer-interrupt-
