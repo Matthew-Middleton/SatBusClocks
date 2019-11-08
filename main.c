@@ -27,10 +27,10 @@ int main(void)
     CSCTL0_H = 0;           /*Lock CS registers*/
 
     configTimerA(50000);
-    while(1)
+    /*while(1)
     {
         _bis_SR_register(LPM3_bits+GIE);//what?
-    }
+    }*/
 	return 0;
 }
 
