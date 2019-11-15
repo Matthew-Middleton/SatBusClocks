@@ -3,7 +3,7 @@
  
  namespace SatLib
  {
-	trypedef struct _CLK_Registers
+	typedef struct _CLK_Registers
 	{
 	/*----------------------------------------------------------------------------------------------------------------*/
 	/*CLK registers*/
