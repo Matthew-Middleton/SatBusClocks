@@ -1,7 +1,18 @@
 #include <msp430.h> 
-
+#include "SatCLKS.h"
 void configTimerA(unsigned int delayCycles);
+void setCLKPreScalar(unsigned int clk, unsigned int Hz, unsigned int divisor)
+{
+    *CSCTL0_H = CSKEY_H;//Unlocks register
+    *CSCTL1 = Hz;       //Sets the DCO to the given frequency
+    *CSCTL2 = clk;      //Selects the given CLKs
+    *CSCTL3 = divisor;  //Sets the divider according to the clocks provided
 
+    //need to determine how to set cycle delay to let the DCO settle based of user input
+    /*Delay by ~10us to let DCO settle. 30 cycles = 20 cycles buffer + (10us / (1/1MHz))*/
+    __delay_cycles(30);
+	*CSCTL0_H = 0;
+}
 /**
  * main.c
  */
