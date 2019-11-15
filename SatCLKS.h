@@ -3,7 +3,7 @@
  
  namespace SatLib
  {
-	typedef struct _CLK_Registers
+	class SatCLKs
 	{
 	/*----------------------------------------------------------------------------------------------------------------*/
 	/*CLK registers*/
@@ -16,6 +16,6 @@
 	volatile unsigned int *CSCTL5;		/*Sets the fault flags for the specified oscillators*/
 	volatile unsigned int *CSCTL6;		/*Sets the given CLKS to be available for conditional module requests*/
 	/*-----------------------------------------------------------------------------------------------------------------*/
-	} CLK_Registers;
+	};
  }
  
