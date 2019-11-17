@@ -1,6 +1,7 @@
-#include <msp430.h> 
+
 #include "SatCLKS.h"
 void configTimerA(unsigned int delayCycles);
+
 void setCLKPreScalar(unsigned int clk, unsigned int Hz, unsigned int divisor)
 {
     *CSCTL0_H = CSKEY_H;//Unlocks register
