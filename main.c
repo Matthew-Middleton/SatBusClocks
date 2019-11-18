@@ -1,19 +1,9 @@
 
+
 #include "SatCLKS.h"
+
 void configTimerA(unsigned int delayCycles);
 
-void setCLKPreScalar(unsigned int clk, unsigned int Hz, unsigned int divisor)
-{
-    *CSCTL0_H = CSKEY_H;//Unlocks register
-    *CSCTL1 = Hz;       //Sets the DCO to the given frequency
-    *CSCTL2 = clk;      //Selects the given CLKs
-    *CSCTL3 = divisor;  //Sets the divider according to the clocks provided
-
-    //need to determine how to set cycle delay to let the DCO settle based of user input
-    /*Delay by ~10us to let DCO settle. 30 cycles = 20 cycles buffer + (10us / (1/1MHz))*/
-    __delay_cycles(30);
-    *CSCTL0_H = 0;
-}
 /**
  * main.c
  */
@@ -29,14 +19,7 @@ int main(void)
     */
     PM5CTL0 &= ~LOCKLPM5;
 
-    CSCTL0_H = CSKEY_H;     /*Unlocks the CS registers for manipulation*/
-    CSCTL1 = DCOFSEL_0;     /*Sets the DCO to 1 MHz: Default frequency*/
-    CSCTL2 = SELM__DCOCLK | SELS__DCOCLK;  /*Selects MCLK and SMCLK as the desired clock*/
-    CSCTL3 = DIVM__1 | DIVS__1;        /*Sets the divider for MCLK and SMCLK to 1*/
-
-    /*Delay by ~10us to let DCO settle. 30 cycles = 20 cycles buffer + (10us / (1/1MHz))*/
-    __delay_cycles(30);
-    CSCTL0_H = 0;           /*Lock CS registers*/
+    setCLK(SELM_DCOCLK | SELS_DCOCLK, DCOFSEL_2, DIVM__1 | DIVS__1)
 
     configTimerA(500);
     while(1)
@@ -46,7 +29,21 @@ int main(void)
     return 0;
 }
 
-//should configure to check for unsigned overflow
+void setCLK(unsigned int clk, unsigned int freq, unsigned int div)
+{
+    CLKREGISTERS.(*CSCTL0_H) = CSKEY_H; //Unlocks register
+#ifdef FRCTL0
+    FRCTL0 = FRCTLPW | NWAITS1;
+#endif
+    CLKREGISTERS.(*CSCTL1) = freq;  //Sets the DCO to the given frequency
+    CLKREGISTERS.(*CSCTL2) = clk;   //Sets the clock to DCO
+    CLKREGISTERS.(*CSCTL3) = div;   //Sets the divider according to the clocks provided
+
+    /*Delay by ~10us to let DCO settle. 30 cycles = 20 cycles buffer + (10us / (1/1MHz))*/
+    __delay_cycles(4);//per specs
+    *CSCTL0_H = 0;                      //lock the CS registers
+}
+
 void configTimerA(unsigned int delayCycles)
 {
 
@@ -62,3 +59,4 @@ __interrupt void timer_A0(void)
     TA0CCTL0 &= ~TAIFG;
 }
 //https://e2e.ti.com/support/microcontrollers/msp430/f/166/t/618978?MSP430FR5994-LPM3-using-timer-interrupt-
+//http://e2e.ti.com/support/microcontrollers/msp430/f/166/t/609971?MSP430FR5994-Can-t-get-system-to-work-on-16-MHz
