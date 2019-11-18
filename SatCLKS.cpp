@@ -1,7 +1,13 @@
 
 #include "SatCLKS.h"
 
-void setCLK(unsigned int clk, unsigned int freq, unsigned int div)
+
+SatLib::SatCLKS::SatCLKS()
+{
+	
+}
+
+void setCLK(unsigned int clk, unsigned int freq, unsigned int clk_div)
 {
     CLKREGISTERS.(*CSCTL0_H) = CSKEY_H; //Unlocks register
 #ifdef FRCTL0
@@ -9,7 +15,7 @@ void setCLK(unsigned int clk, unsigned int freq, unsigned int div)
 #endif
     CLKREGISTERS.(*CSCTL1) = freq;  //Sets the DCO to the given frequency
     CLKREGISTERS.(*CSCTL2) = clk;   //Sets the clock to DCO
-    CLKREGISTERS.(*CSCTL3) = div;   //Sets the divider according to the clocks provided
+    CLKREGISTERS.(*CSCTL3) = clk_div;   //Sets the source divider according to the clocks provided
 
     /*Delay by ~10us to let DCO settle. 30 cycles = 20 cycles buffer + (10us / (1/1MHz))*/
     __delay_cycles(4);//per specs
