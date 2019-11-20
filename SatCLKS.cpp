@@ -1,15 +1,25 @@
 
 #include "SatCLKS.h"
-
-void configClks(unsigned int clk, unsigned int dco_range, unsigned int freq, unsigned int clk_div)
+#include <stdlib.h>
+SatCLKS::SatCLKS()
 {
-    uint16_t tempCSCTL3 = 0;
-    tempCSCTL3 = CSCTL3;        //Store CSCTL3 values temporarily
+    /*Assigns each of the CS registers to a pointer within the class*/
+    //doesn't work
+    this->CSCTL0_H = CSCTL0_H;
+    this->CSCTL1 = CSCTL1;
+    this->CSCTL2 = CSCTL2;
+    this->CSCTL3 = CSCTL3;
+    this->CSCTL4 = CSCTL4;
+    this->CSCTL5 = CSCTL5;
+    this->CSCTL6 = CSCTL6;
+}
 
-    CLKREGISTERS.(*CSCTL0_H) = CSKEY_H; //Unlocks register
-    CLKREGISTERS.(*CSCTL2) = clk;   //Sets the clock to DCO
+void SatCLKS::configClks(unsigned int clk, unsigned int dco_range, unsigned int freq, unsigned int clk_div)
+{
+    *CSCTL0_H = CSKEY_H; //Unlocks register
+    *CSCTL2 = clk;   //Sets the clock to DCO
     //Sets the divider according to the clocks provided
-    CLKREGISTERS.(*CSCTL3) = clk_div;
+    *CSCTL3 = clk_div;
 
     if(dco_range&DCORSEL)   //The DCO range may exceed 8MHz.
     {
@@ -42,22 +52,21 @@ void configClks(unsigned int clk, unsigned int dco_range, unsigned int freq, uns
 #endif
 
     }
-    CLKREGISTERS.(*CSCTL1) = dco_range | freq;  //Sets the DCO to the given frequency
+    *CSCTL1 = dco_range | freq;  //Sets the DCO to the given frequency
 
     /*Delay by ~10us to let DCO settle, per device errata. k cycles = 20 cycles buffer + (10us / (1/n MHz))*/
     //is this needed or do the wait states handle the delay?
-    //__delay_cycles(30);//per specs
+    __delay_cycles(30);//per specs
 
-    CLKREGISTERS.(*CSCTL3) = tempCSCTL3;    //Restore clock settings. Is this necessary?
     *CSCTL0_H = 0;                  //lock the CS registers
 }
 
-void configPreScalarClk()
+void SatCLKS::configPreScalarClk()
 {
 
 }
 
-void configTimerA(unsigned int delayCycles)
+void SatCLKS::configTimerA(unsigned int delayCycles)
 {
 
     TA0CCTL0 |= CCIE;                           /*Enable Interrupts on Timer*/
@@ -70,6 +79,7 @@ __interrupt void timer_A0(void)
 {
     P1OUT ^= BIT1;
     TA0CCTL0 &= ~TAIFG;
+    exit(0);
 }
 //https://e2e.ti.com/support/microcontrollers/msp430/f/166/t/618978?MSP430FR5994-LPM3-using-timer-interrupt-
 //http://e2e.ti.com/support/microcontrollers/msp430/f/166/t/609971?MSP430FR5994-Can-t-get-system-to-work-on-16-MHz
