@@ -25,15 +25,14 @@ namespace SatLib
             volatile unsigned int *CSCTL6;      /*Sets the given CLKS to be available for conditional module requests*/
             /*-----------------------------------------------------------------------------------------------------------------*/
         } CLKREGISTERS;
-		
-		public:
-			SatLib::SatCLKS::SatCLKS();
-			
-			/*Sets a clock
-			*
-			*/
-			void setCLK(unsigned int clk, unsigned int freq, unsigned int div);
-			
-			void configTimerA(unsigned int delayCycles);
+
+        /*Sets a clock
+         *
+         */
+        void configClks(unsigned int clk, unsigned int freq, unsigned int div);
+
+        void configPrescalarClk();
+
+        void configTimerA(unsigned int delayCycles);
     };
 }
