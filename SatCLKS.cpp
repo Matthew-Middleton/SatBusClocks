@@ -4,7 +4,6 @@
 SatCLKS::SatCLKS()
 {
     /*Assigns each of the CS registers to a pointer within the class*/
-    //doesn't work
     this->CSCTL0_H = CSCTL0_H;
     this->CSCTL1 = CSCTL1;
     this->CSCTL2 = CSCTL2;
