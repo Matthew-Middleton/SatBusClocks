@@ -11,13 +11,13 @@
 SatCLKS::SatCLKS()
 {
     /*Assigns each of the CS registers to a pointer within the class*/
-    this->CSCTL0_H = CSCTL0_H;
-    this->CSCTL1 = CSCTL1;
-    this->CSCTL2 = CSCTL2;
-    this->CSCTL3 = CSCTL3;
-    this->CSCTL4 = CSCTL4;
-    this->CSCTL5 = CSCTL5;
-    this->CSCTL6 = CSCTL6;
+    this->CSCTL0_H_ = (volatile unsigned int *) &CSCTL0_H;
+    this->CSCTL1_ = (volatile unsigned int *) &CSCTL1;
+    this->CSCTL2_ = (volatile unsigned int *) &CSCTL2;
+    this->CSCTL3_ = (volatile unsigned int *) &CSCTL3;
+    this->CSCTL4_ = (volatile unsigned int *) &CSCTL4;
+    this->CSCTL5_ = (volatile unsigned int *) &CSCTL5;
+    this->CSCTL6_ = (volatile unsigned int *) &CSCTL6;
 }
 
 void SatCLKS::configClks(unsigned int clk, unsigned int dco_range, unsigned int freq, unsigned int clk_div)
@@ -26,11 +26,11 @@ void SatCLKS::configClks(unsigned int clk, unsigned int dco_range, unsigned int 
     //calculation for cycle delays. k cycles = 20 cycles buffer + (10us / (1/n MHz))
     cycles = 20 + (10 / lookup_frequency(dco_range, freq));
 
-    *CSCTL0_H = CSKEY_H; //Unlocks register
-    *CSCTL1 = 0;
-    *CSCTL2 = clk;   //Sets the clock to DCO
+    *CSCTL0_H_ = CSKEY_H; //Unlocks register
+    *CSCTL1_ = 0;
+    *CSCTL2_ = clk;   //Sets the clock to DCO
     //Sets the divider according to the clocks provided
-    *CSCTL3 = clk_div;
+    *CSCTL3_ = clk_div;
 
     if(dco_range&DCORSEL)   //The DCO range may exceed 8MHz.
     {
@@ -70,12 +70,12 @@ void SatCLKS::configClks(unsigned int clk, unsigned int dco_range, unsigned int 
         FRCTL0 = FRCTLPW | NWAITS1;
 #endif
     }
-    *CSCTL1 = dco_range | freq;  //Sets the DCO to the given frequency
+    *CSCTL1_ = dco_range | freq;  //Sets the DCO to the given frequency
 
     /*Delay by ~10us to let DCO settle, per device errata. */
     __delay_cycles(30);//per specs
 
-    *CSCTL0_H = 0;                  //lock the CS registers
+    *CSCTL0_H_ = 0;                  //lock the CS registers
 }
 
 /*Looks up the frequency needed to process the cycle delays based off the dco_range, upper or lower (DCORSEL), and freq, the frequency (DCOFSEL)
@@ -161,7 +161,7 @@ void SatCLKS::configTimerA(unsigned int delayCycles)
 #pragma vector = TIMER0_A0_VECTOR
 __interrupt void timer_A0(void)
 {
-    P1OUT ^= BIT1;
+    P1OUT ^= BIT1|BIT0;
     TA0CCTL0 &= ~TAIFG;
 }
 //https://e2e.ti.com/support/microcontrollers/msp430/f/166/t/618978?MSP430FR5994-LPM3-using-timer-interrupt-
