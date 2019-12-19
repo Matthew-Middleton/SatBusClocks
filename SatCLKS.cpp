@@ -2,7 +2,7 @@
  * SatCLKS.cpp
  *
  *  Created on: Nov 18, 2019
- *  Updated on: Dec 5, 2019
+ *  Updated on: Dec 19, 2019
  *      Author: Matthew Middleton
  */
 
@@ -11,71 +11,37 @@
 SatCLKS::SatCLKS()
 {
     /*Assigns each of the CS registers to a pointer within the class*/
-    this->CSCTL0_H_ = (volatile unsigned int *) &CSCTL0_H;
+    this->CSCTL0_H_ = (volatile unsigned char *) &CSCTL0_H;
     this->CSCTL1_ = (volatile unsigned int *) &CSCTL1;
     this->CSCTL2_ = (volatile unsigned int *) &CSCTL2;
     this->CSCTL3_ = (volatile unsigned int *) &CSCTL3;
     this->CSCTL4_ = (volatile unsigned int *) &CSCTL4;
     this->CSCTL5_ = (volatile unsigned int *) &CSCTL5;
     this->CSCTL6_ = (volatile unsigned int *) &CSCTL6;
+    this->FRCTL0_ = (volatile unsigned int *) &FRCTL0;
 }
 
-void SatCLKS::configClks(unsigned int clk, unsigned int dco_range, unsigned int freq, unsigned int clk_div)
+void SatCLKS::configClks(unsigned int clk, unsigned int dco_range, unsigned int freq, unsigned int osc_src)
 {
-    unsigned int cycles = 0;
+    volatile unsigned int cycles = 0;
     //calculation for cycle delays. k cycles = 20 cycles buffer + (10us / (1/n MHz))
-    cycles = 20 + (10 / lookup_frequency(dco_range, freq));
+    //Delay by ~10us to let DCO settle, per device errata.
+    cycles = 20 + (10 * lookup_frequency(dco_range, freq));
+    config_wait_states(dco_range, freq);
 
-    *CSCTL0_H_ = CSKEY_H; //Unlocks register
-    *CSCTL1_ = 0;
-    *CSCTL2_ = clk;   //Sets the clock to DCO
-    //Sets the divider according to the clocks provided
-    *CSCTL3_ = clk_div;
+    *CSCTL0_H_ = CSKEY_H;           //Unlocks the CS registers
+    *CSCTL1_ = dco_range | freq;    //Sets the DCO to the given frequency
+    *CSCTL2_ = clk;                 //Sets the clock to DCO
+    *CSCTL3_ = osc_src;             //Sets the divider according to the clocks provided
 
-    if(dco_range&DCORSEL)   //The DCO range may exceed 8MHz.
+    //simulates NOP sled
+    //may be delaying too long
+    while((cycles--)>0)
     {
-
-#ifdef FRCTL0
-        /*Determine how many waitstates are required for the fram
-         * switches based on the bit pattern(see family guide) specified by freq
-         */
-        switch(freq & (BIT3|BIT2|BIT1))
-        {
-        //If the frequency is 8 MHz: 8MHz/8MHz = 1
-        case 3:
-            FRCTL0 = FRCTLPW | NWAITS1;
-            break;
-        /*If the frequency is 16 MHz: 16MHz / 8MHz = 2
-         *or the frequency is 21 MHz: 21MHz / 8MHz = 2.625
-         *2 wait states are needed
-         */
-        case 4:
-        case 5:
-            FRCTL0 = FRCTLPW | NWAITS2;
-            break;
-        //If the frequency is 24 MHz: 24MHz / 8MHz = 3 wait states are needed
-        case 6:
-            FRCTL0 = FRCTLPW | NWAITS3;
-            break;
-        default:
-            break;
-        }
-#endif
-
+        __delay_cycles(1);
     }
-    else if(freq & (BIT6|BIT3|BIT2))        //The frequency for DCORSEL=0 is 8MHz
-    {
-#ifdef FRCTL0
-        //8MHz frequency
-        FRCTL0 = FRCTLPW | NWAITS1;
-#endif
-    }
-    *CSCTL1_ = dco_range | freq;  //Sets the DCO to the given frequency
 
-    /*Delay by ~10us to let DCO settle, per device errata. */
-    __delay_cycles(30);//per specs
-
-    *CSCTL0_H_ = 0;                  //lock the CS registers
+    *CSCTL0_H_ &= ~CSKEY_H;         //Locks the CS registers
 }
 
 /*Looks up the frequency needed to process the cycle delays based off the dco_range, upper or lower (DCORSEL), and freq, the frequency (DCOFSEL)
@@ -83,9 +49,10 @@ void SatCLKS::configClks(unsigned int clk, unsigned int dco_range, unsigned int 
 unsigned int SatCLKS::lookup_frequency(unsigned int dco_range, unsigned int freq)
 {
     unsigned int lookup = 1;
+    unsigned int mask = (0x000E & freq)>>1;
     if(!(dco_range&BIT6))//lower frequency range; DCORSEL value = 0
     {
-        switch(freq)//DCOFSEL value passed in
+        switch(mask)//DCOFSEL value passed in
         {
         //values rounded up per CSCTL1 register DCOFSEL values
             case 0:         //1MHz
@@ -114,7 +81,7 @@ unsigned int SatCLKS::lookup_frequency(unsigned int dco_range, unsigned int freq
     }
     else//upper frequency range; DCORSEL value = 1
     {
-        switch(freq)//DCORSEL value passed in
+        switch(mask)//DCORSEL value passed in
         {
             case 0:         //1MHz
                 lookup = 1;
@@ -145,7 +112,56 @@ unsigned int SatCLKS::lookup_frequency(unsigned int dco_range, unsigned int freq
     return lookup;
 }
 
-void SatCLKS::configPreScalarClk()
+void SatCLKS::config_wait_states(unsigned int dco_range, unsigned int freq)
+{
+//#ifdef FRCTL0
+    if(dco_range&DCORSEL)   //The DCO range may exceed 8MHz.
+    {
+        /*Determine how many waitstates are required for the fram
+         * switches based on the bit pattern(see family guide) specified by freq
+         */
+        switch(freq & (BIT3|BIT2|BIT1))
+        {
+        //If the frequency is 8 MHz: 8MHz/8MHz = 1
+        case 6:
+            *FRCTL0_ = FRCTLPW | NWAITS1;
+            break;
+        /*If the frequency is 16 MHz: 16MHz / 8MHz = 2
+         *or the frequency is 21 MHz: 21MHz / 8MHz = 2.625
+         *2 wait states are needed
+         */
+        case 8:
+        case 10:
+            *FRCTL0_ = FRCTLPW | NWAITS2;
+            break;
+        //If the frequency is 24 MHz: 24MHz / 8MHz = 3 wait states are needed
+        case 12:
+            *FRCTL0_ = FRCTLPW | NWAITS3;
+            break;
+        default:
+            break;
+        }
+    }
+    /*DCORSEL is 0 and DCOFSEL is at 8MHz
+     */
+    else if((freq & (BIT3|BIT2)) && !(freq & BIT1))
+    {
+        *FRCTL0_ = FRCTLPW | NWAITS1;
+    }
+//#endif
+}
+
+void SatCLKS::set_opts(unsigned int osc_clk_and_drive_opts, unsigned int counter_and_flags_opts, unsigned int clk_requests)
+{
+    *CSCTL0_H_ = CSKEY_H;               //unlock CS registers
+    *CSCTL4_ = osc_clk_and_drive_opts;  //sets the drive for the non-DCO oscillators,
+                                        //as well as the control for turning oscillators or clocks off
+    *CSCTL5_ = counter_and_flags_opts;  //sets the counter and/or flag options
+    *CSCTL6_ = clk_requests;            //enables clock requests, if any
+    *CSCTL0_H_ &= ~CSKEY_H;             //locks the CS registers
+}
+
+void SatCLKS::configPreScalarClk(unsigned int divisor, unsigned int osc_src)
 {
 
 }
