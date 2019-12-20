@@ -10,6 +10,15 @@
 #include <stdint.h>
 #include <msp430.h>
 
+//will need to adjust due to maximum allowed value
+//internal clock frequencies per family guide
+//10kHz typical frequency
+#define VLOCLK_freq 10000
+//5MHz typical frequency
+#define MODCLK_freq 5000000
+//MODCLK divided by 128
+#define LFMODCLK_freq MODCLK_freq>>7
+
 class SatCLKS
 {
 
@@ -47,16 +56,19 @@ class SatCLKS
          */
         void configClks(unsigned int clk, unsigned int dco_range, unsigned int freq, unsigned int osc_src);
 
-
-        void set_opts(unsigned int csctl4_opts, unsigned int counter_and_flags_opts, unsigned int clk_requests);
-
-        /*Configures a clock for prescaler use
-         *
-         * Incomplete at the moment
+        /*Configures the options associated with CSCTL4-6
          */
-        void configPreScalarClk(unsigned int divisor, unsigned int osc_src);
+        void config_opts(unsigned int csctl4_opts, unsigned int counter_and_flags_opts, unsigned int clk_requests);
+
+        unsigned int getClkSpeed(unsigned int clk);
 
         /*Configures a timer, with interrupts, given the amount to delay
          */
         void configTimerA(unsigned int delayCycles);
 };
+
+
+
+
+
+
